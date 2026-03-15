@@ -422,23 +422,30 @@ a:hover { text-decoration: underline; }
     white-space: nowrap;
 }
 
-.btn-icon {
+.file-actions .btn-icon {
     background: none;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     cursor: pointer;
     padding: 5px 8px;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     transition: all 0.15s;
     display: inline-flex;
     align-items: center;
     margin-left: 4px;
 }
 
-.btn-icon:hover {
-    background: var(--primary);
+.file-actions .btn-icon:hover {
+    background: var(--accent);
     color: #fff;
-    border-color: var(--primary);
+    border-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(207,42,54,0.3);
+}
+
+.file-actions .btn-icon.delete:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    box-shadow: 0 2px 6px rgba(220,38,38,0.35);
 }
 
 tr.file-previewing {
@@ -721,11 +728,15 @@ tr.file-previewing .file-name {
 
 .modal-confirm-content {
     text-align: center;
-    max-width: 400px;
+    max-width: 460px;
 }
 
 .modal-confirm-content h3 {
     margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.3px;
 }
 
 .confirm-icon {
@@ -756,8 +767,55 @@ tr.file-previewing .file-name {
 .confirm-message {
     color: var(--text-secondary);
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
     margin-bottom: 4px;
+    text-align: left;
+    word-break: break-word;
+}
+
+.confirm-text {
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.confirm-details {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-top: 4px;
+}
+
+.confirm-detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid #eaedf0;
+}
+
+.confirm-detail-row:last-child {
+    border-bottom: none;
+}
+
+.confirm-detail-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    min-width: 80px;
+    flex-shrink: 0;
+    padding-top: 1px;
+}
+
+.confirm-detail-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+    word-break: break-all;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
 }
 
 .modal-confirm-content .modal-actions {
@@ -777,13 +835,17 @@ tr.file-previewing .file-name {
     position: fixed;
     top: 72px;
     right: 24px;
-    padding: 12px 20px;
+    padding: 14px 22px;
     border-radius: var(--radius);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     z-index: 300;
-    box-shadow: var(--shadow-md);
-    transition: opacity 0.3s;
+    box-shadow: var(--shadow-lg);
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .toast-success { background: var(--success); color: #fff; }

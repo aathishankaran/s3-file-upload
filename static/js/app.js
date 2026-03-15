@@ -204,6 +204,9 @@ async function navigateTo(prefix) {
                     <button class="btn-icon" onclick="downloadFile('${escHtml(fileKey)}')" title="Download">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
+                    <button class="btn-icon delete" onclick="deleteFile('${escHtml(fileKey)}')" title="Delete">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
                 </td>
             </tr>`;
         }).join('');
@@ -247,6 +250,33 @@ function downloadFile(key) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+async function deleteFile(key) {
+    const fileName = key.split('/').pop();
+    const filePath = 's3://' + state.s3Bucket + '/' + key;
+    const ok = await showConfirm({
+        title: 'Delete File',
+        message: 'Are you sure you want to delete this file? This action cannot be undone.',
+        details: [
+            { label: 'File', value: fileName },
+            { label: 'Path', value: filePath }
+        ],
+        confirmText: 'Delete',
+        type: 'danger'
+    });
+    if (!ok) return;
+    try {
+        await api('POST', '/api/s3/delete', { key });
+        toast(`File "${fileName}" deleted successfully`, 'success');
+        // Close preview if previewing this file
+        if (window._previewKey && (window._previewKey === key || window._previewKey === fileName)) {
+            closePreviewPanel();
+        }
+        navigateTo(state.currentPrefix);
+    } catch (err) {
+        toast(err.message, 'error');
+    }
 }
 
 function previewFile(key) {
@@ -397,13 +427,48 @@ function triggerFolderUpload() {
     document.getElementById('folder-input').click();
 }
 
-function handleFileSelect(input) {
-    if (input.files.length) uploadFiles(Array.from(input.files));
+async function handleFileSelect(input) {
+    if (input.files.length) {
+        const files = Array.from(input.files);
+        const targetPath = 's3://' + state.s3Bucket + '/' + (state.currentPrefix || '');
+        const fileNames = files.map(f => f.name);
+        const displayList = fileNames.length > 5
+            ? fileNames.slice(0, 5).join(', ') + ` ... and ${fileNames.length - 5} more`
+            : fileNames.join(', ');
+        const ok = await showConfirm({
+            title: 'Upload Files',
+            message: `Upload ${files.length} file(s) to the following location?`,
+            details: [
+                { label: 'Destination', value: targetPath },
+                { label: 'Files', value: displayList },
+                { label: 'Total', value: files.length + ' file(s)' }
+            ],
+            confirmText: 'Upload',
+            type: 'info'
+        });
+        if (ok) uploadFiles(files);
+    }
     input.value = '';
 }
 
-function handleFolderSelect(input) {
-    if (input.files.length) uploadFiles(Array.from(input.files), true);
+async function handleFolderSelect(input) {
+    if (input.files.length) {
+        const files = Array.from(input.files);
+        const targetPath = 's3://' + state.s3Bucket + '/' + (state.currentPrefix || '');
+        const folderName = files[0]?.webkitRelativePath?.split('/')[0] || 'folder';
+        const ok = await showConfirm({
+            title: 'Upload Folder',
+            message: 'Upload this folder to the following location?',
+            details: [
+                { label: 'Folder', value: folderName },
+                { label: 'Destination', value: targetPath },
+                { label: 'Total', value: files.length + ' file(s)' }
+            ],
+            confirmText: 'Upload',
+            type: 'info'
+        });
+        if (ok) uploadFiles(files, true);
+    }
     input.value = '';
 }
 
@@ -502,13 +567,30 @@ document.addEventListener('DOMContentLoaded', function() {
         dropZone.classList.add('active');
     });
 
-    browserView.addEventListener('drop', function(e) {
+    browserView.addEventListener('drop', async function(e) {
         e.preventDefault();
         dragCounter = 0;
         dropZone.style.display = 'none';
         dropZone.classList.remove('active');
         if (e.dataTransfer.files.length) {
-            uploadFiles(Array.from(e.dataTransfer.files));
+            const files = Array.from(e.dataTransfer.files);
+            const targetPath = 's3://' + state.s3Bucket + '/' + (state.currentPrefix || '');
+            const fileNames = files.map(f => f.name);
+            const displayList = fileNames.length > 5
+                ? fileNames.slice(0, 5).join(', ') + ` ... and ${fileNames.length - 5} more`
+                : fileNames.join(', ');
+            const ok = await showConfirm({
+                title: 'Upload Files',
+                message: `Upload ${files.length} file(s) to the following location?`,
+                details: [
+                    { label: 'Destination', value: targetPath },
+                    { label: 'Files', value: displayList },
+                    { label: 'Total', value: files.length + ' file(s)' }
+                ],
+                confirmText: 'Upload',
+                type: 'info'
+            });
+            if (ok) uploadFiles(files);
         }
     });
 });
@@ -886,11 +968,27 @@ function closeModal(id) {
 // ---------------------------------------------------------------------------
 let _confirmResolve = null;
 
-function showConfirm({ title, message, confirmText, cancelText, type }) {
+function showConfirm({ title, message, confirmText, cancelText, type, details }) {
     return new Promise(resolve => {
         _confirmResolve = resolve;
         document.getElementById('confirm-title').textContent = title || 'Confirm';
-        document.getElementById('confirm-message').textContent = message || '';
+        const msgEl = document.getElementById('confirm-message');
+        // Build rich HTML message
+        let html = '';
+        if (message) {
+            html += '<div class="confirm-text">' + escHtml(message) + '</div>';
+        }
+        if (details && details.length) {
+            html += '<div class="confirm-details">';
+            details.forEach(d => {
+                html += '<div class="confirm-detail-row">';
+                html += '<span class="confirm-detail-label">' + escHtml(d.label) + '</span>';
+                html += '<span class="confirm-detail-value">' + escHtml(d.value) + '</span>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        msgEl.innerHTML = html;
         const okBtn = document.getElementById('confirm-ok-btn');
         okBtn.textContent = confirmText || 'Confirm';
         okBtn.className = type === 'danger' ? 'btn btn-danger-filled' : 'btn btn-primary';

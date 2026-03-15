@@ -279,6 +279,24 @@ def api_s3_download():
         return jsonify({"error": f"S3 error: {str(e)}"}), 502
 
 
+@app.route("/api/s3/delete", methods=["POST"])
+@login_required
+def api_s3_delete():
+    data = request.get_json()
+    key = data.get("key", "") if data else ""
+    key = _sanitize_key(key)
+    if not key:
+        return jsonify({"error": "File key required"}), 400
+    parent = key.rsplit("/", 1)[0] + "/" if "/" in key else ""
+    if not _check_folder_access(session["username"], parent):
+        return jsonify({"error": "Access denied"}), 403
+    try:
+        s3_service.delete_object(key)
+        return jsonify({"message": f"File '{key}' deleted successfully", "key": key})
+    except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
+        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+
+
 @app.route("/api/s3/preview")
 @login_required
 def api_s3_preview():
