@@ -85,7 +85,7 @@ def add_user(username, temp_password, role="user", allowed_folders=None):
         config = _load_config()
         for user in config["users"]:
             if user["username"] == username:
-                raise ValueError(f"User '{username}' already exists")
+                raise ValueError("User '{}' already exists".format(username))
         config["users"].append({
             "username": username,
             "password_hash": hash_password(temp_password),
@@ -107,7 +107,7 @@ def update_user(username, role=None, allowed_folders=None):
                     user["allowed_folders"] = allowed_folders
                 _save_config(config)
                 return user
-        raise ValueError(f"User '{username}' not found")
+        raise ValueError("User '{}' not found".format(username))
 
 
 def delete_user(username):
@@ -128,7 +128,7 @@ def change_password(username, old_password, new_password):
                 user["must_change_password"] = False
                 _save_config(config)
                 return True
-        raise ValueError(f"User '{username}' not found")
+        raise ValueError("User '{}' not found".format(username))
 
 
 def admin_reset_password(username, new_password):
@@ -140,4 +140,4 @@ def admin_reset_password(username, new_password):
                 user["must_change_password"] = True
                 _save_config(config)
                 return True
-        raise ValueError(f"User '{username}' not found")
+        raise ValueError("User '{}' not found".format(username))

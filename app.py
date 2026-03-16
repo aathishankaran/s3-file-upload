@@ -203,9 +203,9 @@ def api_s3_list():
         items = s3_service.list_objects(prefix)
         return jsonify({"prefix": prefix, "items": items})
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
     except Exception as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 @app.route("/api/s3/upload", methods=["POST"])
@@ -223,14 +223,14 @@ def api_s3_upload():
     try:
         uploaded = []
         for f in files:
-            relative_path = request.form.get(f"path_{f.filename}", f.filename)
+            relative_path = request.form.get("path_{}".format(f.filename), f.filename)
             relative_path = _sanitize_key(relative_path)
             key = prefix + relative_path
             s3_service.upload_file(key, f.stream)
             uploaded.append(key)
-        return jsonify({"message": f"Uploaded {len(uploaded)} file(s)", "keys": uploaded})
+        return jsonify({"message": "Uploaded {} file(s)".format(len(uploaded)), "keys": uploaded})
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 @app.route("/api/s3/create-folder", methods=["POST"])
@@ -250,9 +250,9 @@ def api_s3_create_folder():
         return jsonify({"error": "Access denied to this folder"}), 403
     try:
         s3_service.create_folder(full_path)
-        return jsonify({"message": f"Folder '{name}' created", "key": full_path})
+        return jsonify({"message": "Folder '{}' created".format(name), "key": full_path})
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 @app.route("/api/s3/download")
@@ -271,12 +271,12 @@ def api_s3_download():
         filename = key.rsplit("/", 1)[-1]
         content_type = resp.get("ContentType", "application/octet-stream")
         headers = {
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": 'attachment; filename="{}"'.format(filename),
             "Content-Type": content_type,
         }
         return Response(resp["Body"].iter_chunks(1024 * 64), headers=headers)
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 @app.route("/api/s3/delete", methods=["POST"])
@@ -292,9 +292,9 @@ def api_s3_delete():
         return jsonify({"error": "Access denied"}), 403
     try:
         s3_service.delete_object(key)
-        return jsonify({"message": f"File '{key}' deleted successfully", "key": key})
+        return jsonify({"message": "File '{}' deleted successfully".format(key), "key": key})
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 @app.route("/api/s3/preview")
@@ -312,12 +312,12 @@ def api_s3_preview():
         content_type = resp.get("ContentType", "application/octet-stream")
         filename = key.rsplit("/", 1)[-1]
         headers = {
-            "Content-Disposition": f'inline; filename="{filename}"',
+            "Content-Disposition": 'inline; filename="{}"'.format(filename),
             "Content-Type": content_type,
         }
         return Response(resp["Body"].iter_chunks(1024 * 64), headers=headers)
     except (ClientError, NoCredentialsError, EndpointConnectionError) as e:
-        return jsonify({"error": f"S3 error: {str(e)}"}), 502
+        return jsonify({"error": "S3 error: {}".format(str(e))}), 502
 
 
 # ---------------------------------------------------------------------------
@@ -354,7 +354,7 @@ def api_admin_add_user():
             role=data.get("role", "user"),
             allowed_folders=data.get("allowed_folders", []),
         )
-        return jsonify({"message": f"User '{username}' created"})
+        return jsonify({"message": "User '{}' created".format(username)})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -373,7 +373,7 @@ def api_admin_update_user(username):
         )
         if data.get("reset_password"):
             auth_service.admin_reset_password(username, data["reset_password"])
-        return jsonify({"message": f"User '{username}' updated"})
+        return jsonify({"message": "User '{}' updated".format(username)})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -384,7 +384,7 @@ def api_admin_delete_user(username):
     if username == session["username"]:
         return jsonify({"error": "Cannot delete your own account"}), 400
     auth_service.delete_user(username)
-    return jsonify({"message": f"User '{username}' deleted"})
+    return jsonify({"message": "User '{}' deleted".format(username)})
 
 
 # ---------------------------------------------------------------------------
